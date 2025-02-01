@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'products',
     'orders',
     'users',
+    'django_keycloak.apps.KeycloakAppConfig'
 ]
 
 MIDDLEWARE = [
@@ -53,9 +54,27 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_keycloak.middleware.KeycloakMiddleware',
 ]
 
 ROOT_URLCONF = 'e_commerce_backend.urls'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'users.authentication.KeycloakTokenAuthentication',
+    ],
+}
+
+AUTHENTICATION_BACKENDS = [
+    'django_keycloak.auth.KeycloakAuthenticationBackend',
+]
+
+# Keycloak settings
+KEYCLOAK_SERVER_URL = os.getenv('KEYCLOAK_SERVER_URL')
+KEYCLOAK_REALM = os.getenv('KEYCLOAK_REALM')
+KEYCLOAK_CLIENT_ID = os.getenv('KEYCLOAK_CLIENT_ID')
+KEYCLOAK_CLIENT_SECRET = os.getenv('KEYCLOAK_CLIENT_SECRET')
 
 TEMPLATES = [
     {
