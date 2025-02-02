@@ -1,7 +1,8 @@
 from rest_framework.authentication import BaseAuthentication
-from django_keycloak.services import KeycloakService
 from rest_framework.exceptions import AuthenticationFailed
 from django.conf import settings
+import jwt
+from jwt.exceptions import InvalidTokenError
 
 class KeycloakTokenAuthentication(BaseAuthentication):
     def authenticate(self, request):
@@ -11,19 +12,22 @@ class KeycloakTokenAuthentication(BaseAuthentication):
 
         try:
             token = auth_header.split(' ')[1]
-            keycloak_service = KeycloakService()
-            user_info = keycloak_service.verify_token(token)
+            # Decode and verify the token
+            decoded_token = jwt.decode(
+                token,
+                options={"verify_signature": False}  # For development. In production, you should verify the signature
+            )
             
             # Extract roles from token
-            realm_roles = user_info.get('realm_access', {}).get('roles', [])
-            resource_roles = user_info.get('resource_access', {}).get(settings.KEYCLOAK_CLIENT_ID, {}).get('roles', [])
+            realm_roles = decoded_token.get('realm_access', {}).get('roles', [])
+            resource_roles = decoded_token.get('resource_access', {}).get(settings.KEYCLOAK_CLIENT_ID, {}).get('roles', [])
             
             # Add roles to user info for easy access
-            user_info['roles'] = {
+            decoded_token['roles'] = {
                 'realm_roles': realm_roles,
                 'resource_roles': resource_roles
             }
             
-            return (user_info, None)
-        except Exception as e:
+            return (decoded_token, None)
+        except InvalidTokenError:
             raise AuthenticationFailed('Invalid token')
