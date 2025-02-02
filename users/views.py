@@ -5,28 +5,6 @@ from .custompermissions import HasKeycloakRole
 from rest_framework import viewsets, status
 from .models import User
 
-# @api_view(['GET'])
-# @authentication_classes([KeycloakTokenAuthentication])
-# @permission_classes([HasKeycloakRole('admin')])
-# def admin_only_view(request):
-#     return Response({
-#         'message': 'Admin access granted',
-#         'user_info': request.user
-#     })
-
-
-
-# @api_view(['GET'])
-# @authentication_classes([KeycloakTokenAuthentication])
-# @permission_classes([user_permission])
-# def user_view(request):
-#     return Response({
-#         'message': 'User access granted',
-#         'user_info': request.user
-#     })
-
-# user_permission = HasKeycloakRole('user')
-
 class UserViewset(viewsets.ViewSet):
     authentication_classes = [KeycloakTokenAuthentication]
     # permission_classes = [HasKeycloakRole('user')]
