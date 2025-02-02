@@ -2,7 +2,6 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from django.conf import settings
 import jwt
-from jwt.exceptions import InvalidTokenError
 from .models import User
 
 class KeycloakTokenAuthentication(BaseAuthentication):
@@ -13,50 +12,39 @@ class KeycloakTokenAuthentication(BaseAuthentication):
 
         try:
             token = auth_header.split(' ')[1]
-            # Decode and verify the token
             decoded_token = jwt.decode(
                 token,
-                options={"verify_signature": False}  # For development. In production, you should verify the signature
+                options={"verify_signature": False}
             )
-
-            # Extract user info from the token
-            keycloak_id = decoded_token.get('sub')
-            username = decoded_token.get('preferred_username')
-            email = decoded_token.get('email')
-            first_name = decoded_token.get('first_name')
-            last_name = decoded_token.get('lastname')
-            phone = decoded_token.get('phone')
             
-            user, created = User.objects.get_or_create(
-                keycloak_id=keycloak_id,
-                defaults={
-                    'username': username,
-                    'email': email,
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'phone': phone
+            # Check if it's a service account/client credentials token
+            if 'client_id' in decoded_token.get('azp', '').lower() or 'service-account' in decoded_token.get('preferred_username', '').lower():
+                # Return only the token info without creating a user
+                decoded_token['roles'] = {
+                    'realm_roles': decoded_token.get('realm_access', {}).get('roles', []),
+                    'resource_roles': decoded_token.get('resource_access', {}).get(settings.KEYCLOAK_CLIENT_ID, {}).get('roles', [])
                 }
+                return (None, decoded_token)
+            
+            # For regular user tokens, proceed with user creation/update
+            user_data = {
+                'keycloak_id': decoded_token.get('sub'),
+                'username': decoded_token.get('preferred_username', ''),
+                'email': decoded_token.get('email', f"{decoded_token.get('sub')}@placeholder.com"),
+                'first_name': decoded_token.get('given_name', ''),
+                'last_name': decoded_token.get('family_name', '')
+            }
+
+            user, _ = User.objects.get_or_create(
+                keycloak_id=user_data['keycloak_id'],
+                defaults=user_data
             )
 
-            # Update user info if has changed
-            if not created:
-                user.username = username
-                user.email = email
-                user.first_name = first_name
-                user.last_name = last_name
-                user.phone = phone
-                user.save()
-
-            # Extract roles from token
-            realm_roles = decoded_token.get('realm_access', {}).get('roles', [])
-            resource_roles = decoded_token.get('resource_access', {}).get(settings.KEYCLOAK_CLIENT_ID, {}).get('roles', [])
-            
-            # Add roles to user info for easy access
             decoded_token['roles'] = {
-                'realm_roles': realm_roles,
-                'resource_roles': resource_roles
+                'realm_roles': decoded_token.get('realm_access', {}).get('roles', []),
+                'resource_roles': decoded_token.get('resource_access', {}).get(settings.KEYCLOAK_CLIENT_ID, {}).get('roles', [])
             }
             
-            return (decoded_token, None)
-        except InvalidTokenError:
-            raise AuthenticationFailed('Invalid token')
+            return (user, decoded_token)
+        except Exception as e:
+            raise AuthenticationFailed(f'Invalid token: {str(e)}')
