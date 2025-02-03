@@ -36,3 +36,25 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
             return Response({'detail': serializer.data}, status = status.HTTP_200_OK)
         except ProductCategory.DoesNotExist:
             return Response({'detail': 'Product Category not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def update(self, request, pk=None):
+        try:
+            queryset = self.get_queryset()
+            product_category = queryset.get(pk=pk)
+            serializer = self.get_serializer(product_category, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response({
+                'detail': 'Product Category updated successfully',
+                'data': serializer.data,
+            })
+        except ProductCategory.DoesNotExist:
+            return Response({'detail': 'Product Category not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def destroy(self, request, pk=None):
+        try:
+            queryset = self.get_queryset()
+            product_category = queryset.get(pk=pk).delete()
+            return Response({'detail': 'Product Category deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        except ProductCategory.DoesNotExist:
+            return Response({'detail': 'Product Category not found'}, status=status.HTTP_404_NOT_FOUND)
