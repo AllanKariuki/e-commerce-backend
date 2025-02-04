@@ -58,3 +58,74 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Product Category deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
         except ProductCategory.DoesNotExist:
             return Response({'detail': 'Product Category not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+    def create(self, request):
+        try:
+            category = request.body["category"]
+            if not ProductCategory.filter(id = category):
+                return Response(
+                    { 'detail': 'Product category does not exist'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            serializer=self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(
+                {'detail': 'Product created successfully'},
+                status=status.HTTP_201_CREATED_OK
+            )
+        except Product.AlreadyExists:
+            return Response(
+                {'detail': 'Product already exists'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+    def list(self, request):
+        queryset=self.get_queryset()
+        serializer= self.get_serializer(queryset, many=True)
+        return Response({ 'detail': serializer.data}, status=status.HTTP_200_OK)
+
+    def retreive(self, request, pk=None):
+        try:
+            queryset = self.get_queryset()
+            product=queryset.get(pk=pk)
+            serializer=self.get_serializer(product)
+            return Response(
+                {'detail': serializer.data},
+                status=status.HTTP_200_OK
+            )
+        except Product.DoesNotExist:
+            return Response({'detail': 'The product does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    def update(self, request, pk=None):
+        try:
+            queryset=self.get_queryset()
+            product=queryset.get(pk=pk)
+            serializer=self.get_serializer(product, request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(
+                {'detail': 'Product updated successfully'},
+                status=status.HTTP_200_OK
+            )
+        except Product.DoesNotExist:
+            return Response(
+                {'detail': 'Product cannot be updated as it does not exist'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    def destroy(self, request, pk=None):
+        try:
+            queryset=self.get_queryset()
+            product=queryset.get(pk=pk).delete()
+            return Response({'detail': 'Delete successful'}, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response(
+                {'detail': 'Product does not exist'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
