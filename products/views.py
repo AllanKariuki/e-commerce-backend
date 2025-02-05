@@ -66,24 +66,19 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         try:
-            category = request.body["category"]
-            if not ProductCategory.filter(id = category):
-                return Response(
-                    { 'detail': 'Product category does not exist'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            # category = request.body["category"]
             serializer=self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(
-                {'detail': 'Product created successfully'},
-                status=status.HTTP_201_CREATED_OK
+                {'detail': 'Product created successfully', 'data': serializer.data},
+                status=status.HTTP_201_CREATED
             )
-        except Product.AlreadyExists:
+        except ProductCategory.DoesNotExist:
             return Response(
-                {'detail': 'Product already exists'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+                    { 'detail': 'Product category does not exist'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         
     def list(self, request):
         queryset=self.get_queryset()
