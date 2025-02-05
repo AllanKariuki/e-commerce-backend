@@ -2,7 +2,7 @@ from django.db import models
 
 # Create your models here.
 class User(models.Model):
-    keycloak_id = models.CharField(max_length=255, unique=True)
+    keycloak_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     username = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=255)
