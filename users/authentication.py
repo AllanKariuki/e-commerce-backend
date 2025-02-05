@@ -3,12 +3,14 @@ from rest_framework.exceptions import AuthenticationFailed
 from django.conf import settings
 import jwt
 from .models import User
+from datetime import datetime
+import time
 
 class KeycloakTokenAuthentication(BaseAuthentication):
     def authenticate(self, request):
         auth_header = request.headers.get('Authorization')
         if not auth_header:
-            return None
+            raise AuthenticationFailed('Authorization header missing')
 
         try:
             token = auth_header.split(' ')[1]
@@ -17,6 +19,10 @@ class KeycloakTokenAuthentication(BaseAuthentication):
                 options={"verify_signature": False}
             )
             
+            if decoded_token.get('exp'):
+                if datetime.fromtimestamp(decoded_token.get('exp')) < datetime.now():
+                    raise AuthenticationFailed('Token is expired')
+
             # Check if it's a service account/client credentials token
             if 'client_id' in decoded_token.get('azp', '').lower() or 'service-account' in decoded_token.get('preferred_username', '').lower():
                 # Return only the token info without creating a user
