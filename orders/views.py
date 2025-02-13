@@ -3,10 +3,12 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Order, OrderItem
 from .serializers import OrderSerializer, OrderItemSerializer
 from rest_framework.response import Response
+from products.models import Product
 
 class OrderViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     serializer_class = OrderSerializer
+    queryset = Order.objects.all()
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
@@ -42,7 +44,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.save()
         items = request.body.get("cart_items", [])
         for item in items:
+            product_id = item.get('product')
             item['order'] = serializer.data['id']
+            
+            if not Product.objects.find(pk=product_id):
+                return Response({'msg': 'Product does not exist {product_id}', 'code': 400}, status=status.HTTP_400_BAD_REQUEST)
+            
             order_item_serializer = OrderItemSerializer(data=item)
             if not order_item_serializer.is_valid():
                 return Response({'msg': order_item_serializer.errors, 'code': 400}, status=status.HTTP_400_BAD_REQUEST)

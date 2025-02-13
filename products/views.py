@@ -14,7 +14,7 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response({
+            return Response({ 
                 'detail': 'Product Category created successfully',
                 'data': serializer.data,
             })
