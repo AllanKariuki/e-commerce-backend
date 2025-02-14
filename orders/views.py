@@ -42,12 +42,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         serializer.save()
-        items = request.body.get("cart_items", [])
+        items = request.data.get("cart_items", [])
         for item in items:
             product_id = item.get('product')
             item['order'] = serializer.data['id']
-            
-            if not Product.objects.find(pk=product_id):
+
+            if not Product.objects.get(pk=product_id):
                 return Response({'msg': 'Product does not exist {product_id}', 'code': 400}, status=status.HTTP_400_BAD_REQUEST)
             
             order_item_serializer = OrderItemSerializer(data=item)
@@ -55,7 +55,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 return Response({'msg': order_item_serializer.errors, 'code': 400}, status=status.HTTP_400_BAD_REQUEST)
             order_item_serializer.save()
 
-        return Response('detail:', 'Order created successfully', status=status.HTTP_201_CREATED)
+        return Response({'detail:', 'Order created successfully'}, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         try:
@@ -72,7 +72,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             serializer.save()
 
             # Update order items
-            items = request.body.get("cart_items", [])
+            items = request.data.get("cart_items", [])
             for item in items:
                 # Check if the order items exist in the database
                 order_item = OrderItem.objects.filter(order=order, product=item['product'], size=item['size']).first()
