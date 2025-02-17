@@ -13,10 +13,21 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from celery import Celery
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
+
+#Set the default django settings module
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'e_commerce_backend.settings')
+
+#Create the celery app
+app = Celery('e_commerce_backend')
+
+app.config_from_object('django_conf:settings', namespace='CELERY')
+
+app.autodiscover_tasks()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
