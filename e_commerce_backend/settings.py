@@ -19,16 +19,6 @@ from celery import Celery
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
 
-#Set the default django settings module
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'e_commerce_backend.settings')
-
-#Create the celery app
-app = Celery('e_commerce_backend')
-
-app.config_from_object('django_conf:settings', namespace='CELERY')
-
-app.autodiscover_tasks()
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -39,7 +29,6 @@ SECRET_KEY = 'django-insecure-d(!xz!#g+o-+8@5u7--r1or#^4*924w4plm-%+(-k=zp5ev2lj
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -168,3 +157,26 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+#Redis settings
+REDIS_HOST = os.getenv('REDIS_HOST')
+REDIS_PORT = os.getenv('REDIS_PORT')
+
+# Celery settings
+CELERY_BROCKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# Cache settings with Redis
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
