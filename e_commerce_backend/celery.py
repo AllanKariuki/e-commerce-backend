@@ -7,6 +7,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'e_commerce_backend.settings')
 #Create the celery app
 app = Celery('e_commerce_backend')
 
-app.config_from_object('django_conf:settings', namespace='CELERY')
+app.config_from_object('django.conf:settings', namespace='CELERY')
 
 app.autodiscover_tasks()
