@@ -20,6 +20,37 @@ services:
       - postgresql
     ports:
       - "8083:8080"
+  
+  redis:
+    image: bitnami/redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - 'redis_data:/bitnami/redis'
+
+  celery:
+    build: .
+    command: celery -A e_commerce_backend worker -l info
+    volumes:
+      - .:/code
+    depends_on:
+      - redis
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=your_secret_key_here
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+
+  celery-beat:
+    build: .
+    command: celery -A e_commerce_backend beat -l info
+    volumes:
+      - .:/code
+    depends_on:
+      - redis
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=your_secret_key_here
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
 
 volumes:
   postgresql_data:
