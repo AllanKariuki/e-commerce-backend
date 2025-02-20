@@ -59,13 +59,14 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'e_commerce_backend.urls'
 
-
+# Custom authentication class
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'users.authentication.KeycloakTokenAuthentication',
     ],
 }
 
+#Setting up keycloak to be the authentication backend
 AUTHENTICATION_BACKENDS = [
     'django_keycloak.auth.KeycloakAuthenticationBackend',
 ]
@@ -110,9 +111,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME'),
-        'USER': 'postgres',
+        'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASS'),
-        'HOST': 'localhost',
+        'HOST': os.getenv('DB_HOST'),
         'PORT': '5432',
     }
 }
@@ -166,7 +167,7 @@ REDIS_PORT = os.getenv('REDIS_PORT')
 # Celery settings
 CELERY_BROCKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
 CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
-CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 

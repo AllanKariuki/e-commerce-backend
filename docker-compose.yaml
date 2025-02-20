@@ -1,11 +1,39 @@
 version: '3.8'
 services:
+  web:
+    build: .
+    command: gunicorn e_commerce_backend.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgresql
+      - redis
+      - keycloak
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=your_secret_key_here
+      - DJANGO_ALLOWED_HOSTS=localhost
+      - DB_NAME=ecommerce_db
+      - DB_USER=postgres
+      - DB_PASSWORD=Allan@2001
+      - DB_HOST=postgresql
+      - KEYCLOAK_SERVER_URL=http://keycloak:8083/
+      - KEYCLOAK_REALM=master
+      - KEYCLOAK_CLIENT_ID=ecommerce-backend
+      - KEYCLOAK_CLIENT_SECRET=BhoXwpCHWMK922qB28V69ZQp4oQ92NJL
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
   postgresql:
     image: bitnami/postgresql:latest
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-      - POSTGRESQL_USERNAME=bn_keycloak
-      - POSTGRESQL_DATABASE=bitnami_keycloak
+      - POSTGRESQL_DATABASE=ecommerce_db
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=Allan@2001
+    ports:
+      - "5432:5432"
     volumes:
       - 'postgresql_data:/bitnami/postgresql'
 
@@ -16,6 +44,10 @@ services:
       - KEYCLOAK_ADMIN_PASSWORD=admin
       - KC_SPI_THEME_STATIC_MAX_AGE=-1
       - KC_SPI_THEME_CACHE_THEMES=false
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgresql:5432/ecommerce_db
+      - KC_DB_USERNAME=postgres
+      - KC_DB_PASSWORD=Allan@2001
     depends_on:
       - postgresql
     ports:
@@ -37,10 +69,19 @@ services:
       - .:/code
     depends_on:
       - redis
+      - postgresql
     environment:
       - DEBUG=1
       - SECRET_KEY=your_secret_key_here
       - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+      - DB_NAME=ecommerce_db
+      - DB_USER=postgres
+      - DB_PASS=Allan@2001
+      - DB_HOST=postgresql
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
   celery-beat:
     build: .
@@ -53,6 +94,14 @@ services:
       - DEBUG=1
       - SECRET_KEY=your_secret_key_here
       - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+      - DB_NAME=ecommerce_db
+      - DB_USER=postgres
+      - DB_PASS=Allan@2001
+      - DB_HOST=postgresql
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
 volumes:
   postgresql_data:
