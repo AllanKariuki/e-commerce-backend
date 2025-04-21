@@ -22,7 +22,7 @@ services:
       - KEYCLOAK_SERVER_URL=http://keycloak:8083/
       - KEYCLOAK_REALM=master
       - KEYCLOAK_CLIENT_ID=ecommerce-backend
-      - KEYCLOAK_CLIENT_SECRET=BhoXwpCHWMK922qB28V69ZQp4oQ92NJL
+      - KEYCLOAK_CLIENT_SECRET=cxVJwXrAnxQkmGaD92MkMvRC704IyJT3
       - REDIS_HOST=redis
       - REDIS_PORT=6379
 
