@@ -30,6 +30,7 @@ services:
     image: bitnami/postgresql:latest
     environment:
       - POSTGRESQL_DATABASE=ecommerce_db
+      - POSTGRESQL_POSTGRES_DB=keycloak_db
       - POSTGRESQL_USERNAME=postgres
       - POSTGRESQL_PASSWORD=Allan@2001
     ports:
@@ -45,7 +46,7 @@ services:
       - KC_SPI_THEME_STATIC_MAX_AGE=-1
       - KC_SPI_THEME_CACHE_THEMES=false
       - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://postgresql:5432/ecommerce_db
+      - KC_DB_URL=jdbc:postgresql://postgresql:5432/keycloak_db
       - KC_DB_USERNAME=postgres
       - KC_DB_PASSWORD=Allan@2001
     depends_on:
