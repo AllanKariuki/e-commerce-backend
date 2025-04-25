@@ -77,7 +77,7 @@ services:
       - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
       - DB_NAME=ecommerce_db
       - DB_USER=postgres
-      - DB_PASS=Allan@2001
+      - DB_PASSWORD=Allan@2001
       - DB_HOST=postgresql
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -97,7 +97,7 @@ services:
       - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
       - DB_NAME=ecommerce_db
       - DB_USER=postgres
-      - DB_PASS=Allan@2001
+      - DB_PASSWORD=Allan@2001
       - DB_HOST=postgresql
       - REDIS_HOST=redis
       - REDIS_PORT=6379
