@@ -171,6 +171,15 @@ CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# Specify the modules where Celery should look for tasks
+CELERY_IMPORTS = [
+    'e_commerce_backend.tasks',
+    # 'products.tasks',
+    # 'orders.tasks',
+    # 'users.tasks',
+]
 
 # Cache settings with Redis
 CACHES = {
