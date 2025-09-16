@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  web:
+  backend-service:
     build: .
     command: gunicorn e_commerce_backend.wsgi:application --bind 0.0.0.0:8000
     volumes:
