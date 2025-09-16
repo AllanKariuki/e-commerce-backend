@@ -25,6 +25,7 @@ services:
       - KEYCLOAK_CLIENT_SECRET=cxVJwXrAnxQkmGaD92MkMvRC704IyJT3
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - RUN_MIGRATIONS=true
 
   postgresql:
     image: bitnami/postgresql:latest
