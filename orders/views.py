@@ -4,6 +4,8 @@ from .models import Order, OrderItem
 from .serializers import OrderSerializer, OrderItemSerializer
 from rest_framework.response import Response
 from products.models import Product
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 
 class OrderViewSet(viewsets.ModelViewSet):
     # permission_classes = [IsAuthenticated]
@@ -33,29 +35,30 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     def create(self, request, *args, **kwargs):
-        order_information = {
+        order_data = {
             "user": request.data.get('user'),
             'total_amount': request.data.get('total_amount'),
         } 
+        
+        with transaction.atomic(): # rollback if any step fails
+            serializer = self.get_serializer(data=order_data)
+            serializer.is_valid(raise_exception=True)
+            order = serializer.save()
 
-        serializer = self.get_serializer(data=order_information)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
-        items = request.data.get("cart_items", [])
-        for item in items:
-            product_id = item.get('product')
-            item['order'] = serializer.data['id']
+            items = request.data.get("cart_items", [])
+            for item in items:
+                product_id = item.get('product')
+                product = get_object_or_404(Product, pk=product_id)
 
-            if not Product.objects.get(pk=product_id):
-                return Response({'msg': 'Product does not exist {product_id}', 'code': 400}, status=status.HTTP_400_BAD_REQUEST)
-            
-            order_item_serializer = OrderItemSerializer(data=item)
-            if not order_item_serializer.is_valid():
-                return Response({'msg': order_item_serializer.errors, 'code': 400}, status=status.HTTP_400_BAD_REQUEST)
-            order_item_serializer.save()
+                item["order"] = order.id
+                order_item_serializer = OrderItemSerializer(data=item)
+                order_item_serializer.is_valid(raise_exception=True)
+                order_item_serializer.save()
+        return Response(
+            {"detail": "Order created successfully"},
+            status=status.HTTP_201_CREATED
+        )
 
-        return Response({'detail:', 'Order created successfully'}, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         try:
