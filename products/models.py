@@ -14,6 +14,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE)
     units_in_stock = models.IntegerField()
+    image = models.ImageField(upload_to="products_images", null=True, blank=True)
 
     def __str__(self):
         return self.name
