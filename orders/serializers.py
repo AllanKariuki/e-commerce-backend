@@ -10,7 +10,7 @@ class OrderSerializer(serializers.ModelSerializer):
     cart_items = OrderItemSerializer(many=True)
     class Meta:
         model = Order
-        fields = ['id', 'user', 'status', 'total_amount', 'created_at']
+        fields = ['id', 'user', 'status', 'total_amount', 'created_at', 'cart_items']
         read_only_fields = ['id', 'created_at', 'user']
 
     def create(self, validated_data):
