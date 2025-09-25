@@ -44,7 +44,9 @@ INSTALLED_APPS = [
     'products',
     'orders',
     'users',
-    'django_keycloak.apps.KeycloakAppConfig'
+    'django_keycloak.apps.KeycloakAppConfig',
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 MIDDLEWARE = [
@@ -160,6 +162,14 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": os.getenv('CLOUDINARY_CLOUD_NAME'),
+    "API_KEY": os.getenv("CLOUDINARY_API_KEY"),
+    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET")
+}
+
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 #Redis settings
 REDIS_HOST = os.getenv('REDIS_HOST')
