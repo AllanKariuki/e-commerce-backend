@@ -15,9 +15,10 @@ class Order(models.Model):
     # Add other order fields as needed
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='cart_items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
+    description = models.TextField(default="No description provided")
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
