@@ -1,5 +1,5 @@
 import logging
-from e_commerce_backend.celery import shared_task
+from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
 from datetime import datetime
