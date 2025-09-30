@@ -62,6 +62,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'users.middleware.GuestCookieMiddleware',  # Custom middleware to set guest cookie
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'django_keycloak.middleware.KeycloakMiddleware',
@@ -72,8 +73,12 @@ ROOT_URLCONF = 'e_commerce_backend.urls'
 # Custom authentication class
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'users.authentication.KeycloakTokenAuthentication',
+        # 'users.authentication.KeycloakTokenAuthentication',
+        'users.authentication.GuestOrKeycloakTokenAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ]
 }
 
 #Setting up keycloak to be the authentication backend
