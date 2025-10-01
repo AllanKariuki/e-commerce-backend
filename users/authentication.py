@@ -67,8 +67,7 @@ class GuestOrKeycloakTokenAuthentication(BaseAuthentication):
     def authenticate(self, request):
         # try to authenticate with keycloak token first
         auth_header = request.headers.get('Authorization')
-        # if not auth_header:
-        #     raise AuthenticationFailed('Authorization header missing')
+
         if auth_header and auth_header.startswith("Bearer "):
             try:
                 token = auth_header.split(' ')[1]
@@ -82,38 +81,11 @@ class GuestOrKeycloakTokenAuthentication(BaseAuthentication):
                     if datetime.fromtimestamp(decoded_token.get('exp')) < datetime.now():
                         raise AuthenticationFailed('Token is expired')
 
-                # Check if it's a service account/client credentials token
-                # if 'client_id' in decoded_token.get('azp', '').lower() or 'service-account' in decoded_token.get('preferred_username', '').lower():
-                #     # Return only the token info without creating a user
-                #     decoded_token['roles'] = {
-                #         'realm_roles': decoded_token.get('realm_access', {}).get('roles', []),
-                #         'resource_roles': decoded_token.get('resource_access', {}).get(settings.KEYCLOAK_CLIENT_ID, {}).get('roles', [])
-                #     }
-                #     return (None, decoded_token)
-
                 # Handle service account/client credentials tokens
                 if self._is_service_account(decoded_token):
                     decoded_token['roles'] = self._extract_roles(decoded_token)
                     return (None, decoded_token)
                 
-                # For regular user tokens, proceed with user creation/update
-                # user_data = {
-                #     'keycloak_id': decoded_token.get('sub'),
-                #     'username': decoded_token.get('preferred_username', ''),
-                #     'email': decoded_token.get('email', f"{decoded_token.get('sub')}@placeholder.com"),
-                #     'first_name': decoded_token.get('given_name', ''),
-                #     'last_name': decoded_token.get('family_name', '')
-                # }
-
-                # user, _ = User.objects.get_or_create(
-                #     keycloak_id=user_data['keycloak_id'],
-                #     defaults=user_data
-                # )
-
-                # decoded_token['roles'] = {
-                #     'realm_roles': decoded_token.get('realm_access', {}).get('roles', []),
-                #     'resource_roles': decoded_token.get('resource_access', {}).get(settings.KEYCLOAK_CLIENT_ID, {}).get('roles', [])
-                # }
                 
                 # Handle regular user tokens
                 user = self._get_or_create_user(decoded_token)
@@ -127,15 +99,7 @@ class GuestOrKeycloakTokenAuthentication(BaseAuthentication):
             except Exception as e:
                 raise AuthenticationFailed(f'Invalid token: {str(e)}')
 
-        # guest_id = request.COOKIES.get("guest_session_id")
-        # if not guest_id:
-        #     guest_id = get_random_string(32)
-        #     guest_user, _ = User.objects.get_or_create(
-        #         username=f"guest_{guest_id}",
-        #         defaults={
-        #             'email': f"guest_{guest_id}@placeholder.com"
-        #         }
-        #     )
+        
         return self._authenticate_guest(request)
 
     def _is_service_account(self, decoded_token):
