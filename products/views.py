@@ -18,12 +18,13 @@ from django.db.models import Q
 from .models import Product, ProductCategory
 from .serializers import ProductSerializer, ProductCategorySerializer
 from .pagination import ProductPagination, CustomPageNumberPagination
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class ProductCategoryViewSet(viewsets.ModelViewSet):
     queryset = ProductCategory.objects.all()
     serializer_class = ProductCategorySerializer
-    pagination_class = CustomPageNumberPagination
+    # pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
 
@@ -47,7 +48,8 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    pagination_class = ProductPagination  # Custom pagination for products
+    parser_classes = (MultiPartParser, FormParser)
+    # pagination_class = ProductPagination  # Custom pagination for products
 
     def get_queryset(self):
         queryset = Product.objects.all()
@@ -105,3 +107,4 @@ class ProductViewSet(viewsets.ModelViewSet):
                 queryset = queryset.order_by(ordering)
 
         return queryset
+    
