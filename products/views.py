@@ -17,11 +17,13 @@ from rest_framework import viewsets
 from django.db.models import Q
 from .models import Product, ProductCategory
 from .serializers import ProductSerializer, ProductCategorySerializer
+from .pagination import ProductPagination, CustomPageNumberPagination
 
 
 class ProductCategoryViewSet(viewsets.ModelViewSet):
     queryset = ProductCategory.objects.all()
     serializer_class = ProductCategorySerializer
+    pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
 
@@ -35,9 +37,9 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
         # search by description
         search = self.request.query_params.get('search', None)
         if search is not None:
-            queryset = queryset.fitler(
+            queryset = queryset.filter(
                 Q(name__icontains=search) | 
-                Q(description__icontains = search)
+                Q(description__icontains=search)
             )
 
         return queryset
@@ -45,6 +47,7 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    pagination_class = ProductPagination  # Custom pagination for products
 
     def get_queryset(self):
         queryset = Product.objects.all()
@@ -77,7 +80,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Filter by stock availability
         in_stock = self.request.query_params.get('in_stock', None)
         if in_stock is not None:
-            if in_stock.lowe() in ['true', '1', 'yes']:
+            if in_stock.lower() in ['true', '1', 'yes']:
                 queryset = queryset.filter(units_in_stock__gt=0)
             elif in_stock.lower() in ['false', '0', 'no']:
                 queryset = queryset.filter(units_in_stock=0)
