@@ -15,7 +15,8 @@
 
 from rest_framework import viewsets
 from django.db.models import Q
-from .models import Product, ProductCategory
+from .models import Product, ProductCategory, ProductImage
+from django.db.models import Prefetch
 from .serializers import ProductSerializer, ProductCategorySerializer
 from .pagination import ProductPagination, CustomPageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -46,7 +47,9 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
         return queryset
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
+    queryset = Product.objects.all().prefetch_related(
+        Prefetch('images', queryset=ProductImage.objects.all())
+    )
     serializer_class = ProductSerializer
     parser_classes = (MultiPartParser, FormParser)
     # pagination_class = ProductPagination  # Custom pagination for products
