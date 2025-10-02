@@ -48,7 +48,7 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all().prefetch_related(
-        Prefetch('images', queryset=ProductImage.objects.all())
+        Prefetch('images', queryset=ProductImage.objects.order_by('-is_main'))
     )
     serializer_class = ProductSerializer
     parser_classes = (MultiPartParser, FormParser)
