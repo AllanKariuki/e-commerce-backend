@@ -72,7 +72,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     # read-only nested images for responses (no source argument)
-    product_images = ProductImageSerializer(many=True, read_only=True)
+    product_images = ProductImageSerializer(many=True, read_only=True, source='images')
     main_image = serializers.SerializerMethodField(read_only=True)
 
     # write-only list of uploaded image files for incoming form-data
