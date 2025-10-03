@@ -18,6 +18,15 @@ class ProductSerializer(serializers.ModelSerializer):
 
     main_image = serializers.SerializerMethodField(read_only=True)
 
+    # category = ProductCategorySerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=ProductCategory.objects.all(),
+        source='category',
+        write_only=True
+    )
+
+    category_name = serializers.CharField(source='category.name', read_only=True)
+
     # write-only list of uploaded image files for incoming form-data
     product_images_files = serializers.ListField(
         child=serializers.ImageField(allow_empty_file=False, use_url=False),
@@ -27,7 +36,10 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = [
+            'id','name','description','price','category_name','category_id',
+            'units_in_stock','product_images','product_images_files','main_image'
+        ]
 
     def get_main_image(self, obj):
         """
