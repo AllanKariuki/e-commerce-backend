@@ -89,3 +89,73 @@ class ProductSerializer(serializers.ModelSerializer):
                     is_main=(idx == 0)
                 )
         return instance
+
+
+
+# Option to return the whole category 
+# from rest_framework import serializers
+# from .models import Product, ProductCategory, ProductImage
+
+# class ProductCategorySerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = ProductCategory
+#         fields = '__all__'
+
+# class ProductImageSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = ProductImage
+#         fields = '__all__'
+
+# class ProductSerializer(serializers.ModelSerializer):
+#     # nested full category for responses
+#     category = ProductCategorySerializer(read_only=True)
+
+#     # accept category id on writes, map to `category` on model
+#     category_id = serializers.PrimaryKeyRelatedField(
+#         queryset=ProductCategory.objects.all(),
+#         source='category',
+#         write_only=True,
+#         required=True
+#     )
+
+#     product_images = ProductImageSerializer(many=True, read_only=True, source='images')
+#     main_image = serializers.SerializerMethodField(read_only=True)
+
+#     product_images_files = serializers.ListField(
+#         child=serializers.ImageField(allow_empty_file=False, use_url=False),
+#         write_only=True,
+#         required=False
+#     )
+
+#     class Meta:
+#         model = Product
+#         # explicitly list fields so custom read/write fields are included as expected
+#         fields = [
+#             'id', 'name', 'description', 'price', 'category', 'category_id',
+#             'units_in_stock', 'product_images', 'product_images_files', 'main_image'
+#         ]
+
+#     def get_main_image(self, obj):
+#         main = obj.images.filter(is_main=True).first() or obj.images.first()
+#         if not main:
+#             return None
+#         return ProductImageSerializer(main, context=self.context).data
+
+#     def create(self, validated_data):
+#         images = validated_data.pop('product_images_files', [])
+#         product = Product.objects.create(**validated_data)
+#         for idx, image in enumerate(images):
+#             ProductImage.objects.create(product=product, image=image, is_main=(idx == 0))
+#         return product
+
+#     def update(self, instance, validated_data):
+#         images = validated_data.pop('product_images_files', None)
+#         for attr, value in validated_data.items():
+#             setattr(instance, attr, value)
+#         instance.save()
+
+#         if images is not None:
+#             ProductImage.objects.filter(product=instance).delete()
+#             for idx, image in enumerate(images):
+#                 ProductImage.objects.create(product=instance, image=image, is_main=(idx == 0))
+#         return instance
