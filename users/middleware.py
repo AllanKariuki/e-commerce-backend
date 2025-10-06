@@ -19,7 +19,7 @@ class GuestCookieMiddleware(MiddlewareMixin):
                         value=guest_id,
                         max_age=60 * 60 * 24 * 365, # 1 year
                         httponly=True, # Not accessible via JavaScript
-                        secure=False, # HTTPS only (set to false if not using HTTPS)
-                        samesite='Lax' # CSRF protection
+                        secure=False, # Set to True in production with HTTPS
+                        samesite='Lax' # CSRF protection - Lax is better for CORS
                     )
         return response
