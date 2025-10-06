@@ -20,7 +20,7 @@ class ProductReviewSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     # read-only nested images for responses
     product_images = ProductImageSerializer(many=True, read_only=True, source='images')
-    reviews = ProductReviewSerializer(many=True, read_only=True, source='reviews')
+    reviews = ProductReviewSerializer(many=True, read_only=True)
 
     main_image = serializers.SerializerMethodField(read_only=True)
 
@@ -44,7 +44,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id','name','description','price','category_name','category_id',
-            'units_in_stock','product_images','product_images_files','main_image'
+            'units_in_stock','product_images','product_images_files','main_image', 'reviews'
         ]
 
     def get_main_image(self, obj):
