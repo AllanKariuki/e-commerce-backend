@@ -1,6 +1,6 @@
 # serializers.py
 from rest_framework import serializers
-from .models import Product, ProductCategory, ProductImage
+from .models import Product, ProductCategory, ProductImage, Review
 
 class ProductCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,9 +12,15 @@ class ProductImageSerializer(serializers.ModelSerializer):
         model = ProductImage
         fields = '__all__'
 
+class ProductReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = '__all__'
+
 class ProductSerializer(serializers.ModelSerializer):
     # read-only nested images for responses
     product_images = ProductImageSerializer(many=True, read_only=True, source='images')
+    reviews = ProductReviewSerializer(many=True, read_only=True, source='reviews')
 
     main_image = serializers.SerializerMethodField(read_only=True)
 
