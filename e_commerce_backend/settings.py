@@ -30,7 +30,9 @@ SECRET_KEY = 'django-insecure-d(!xz!#g+o-+8@5u7--r1or#^4*924w4plm-%+(-k=zp5ev2lj
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(" ")
+# Fix ALLOWED_HOSTS to handle environment variable properly
+ALLOWED_HOSTS_ENV = os.getenv("ALLOWED_HOSTS", "localhost 127.0.0.1")
+ALLOWED_HOSTS = ALLOWED_HOSTS_ENV.split(" ") if ALLOWED_HOSTS_ENV else ['localhost', '127.0.0.1']
 
 # CORS_ORIGIN_ALLOW_ALL = True
 # CORS_ALLOW_CREDENTIALS = True
@@ -169,6 +171,8 @@ STATIC_URL = 'static/'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Your React app port
     "http://127.0.0.1:5173",
+    "http://localhost:5174",  # Your React app port
+    "http://127.0.0.1:5174",
 ]
 
 # Alternative: if you want to allow all origins during development (less secure)
@@ -176,7 +180,7 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Allow specific headers
+# Allow specific headers - expanded list for better compatibility
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -187,7 +191,22 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'cache-control',
+    'x-http-method-override',
 ]
+
+# Allow specific methods
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Handle preflight requests
+CORS_PREFLIGHT_MAX_AGE = 86400
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
