@@ -99,7 +99,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 Q(category__name__icontains=search)
             )
 
-        # ORdering 
+        # Ordering
         ordering = self.request.query_params.get('ordering', None)
         if ordering is not None:
             # Allow ordering by name, price, units in stock and category
@@ -108,6 +108,16 @@ class ProductViewSet(viewsets.ModelViewSet):
                                     'category__name', '-category__name']
             if ordering in allowed_orderings:
                 queryset = queryset.order_by(ordering)
+        
+        # Colors 
+        color = self.request.query_params.get('color', None)
+        if color is not None:
+            queryset = queryset.filter(colors__contains=[color])
+        
+        # Sizes
+        size = self.request.query_params.get('size', None)
+        if size is not None:
+            queryset = queryset.filter(sizes__contains=[size])
 
         return queryset
     
