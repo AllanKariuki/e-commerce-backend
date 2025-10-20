@@ -129,8 +129,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         """
         GET /products/recent/ -> return products for this user
         """
-        user_identifier = self.get_user_identifier(request)
+        user_identifier = self._get_user_identifier(request)
         ids = get_recent_ids(user_identifier, limit=20)
+        print(f"Product ids from redis for {user_identifier}: {ids}")
 
         if not ids:
             return Response([])
@@ -149,5 +150,4 @@ class ProductViewSet(viewsets.ModelViewSet):
         guest_cookie = request.COOKIES.get("guest_session_id")
         if guest_cookie:
             return f"guest:{guest_cookie}"
-        
         
