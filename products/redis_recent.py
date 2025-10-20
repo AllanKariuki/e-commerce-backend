@@ -21,9 +21,6 @@ def log_view(user_identifier: str, product_id: int):
     ts = int(time.time())
     pipe = r.pipeline()
     pipe.zadd(key, {str(product_id): ts}) # Use string members
-    print(f"Logged view for {user_identifier}: {product_id}")
-    # The updated set
-    print(f"Current set: {r.zrange(key, 0, -1, withscores=True)}")
     """
     Trim the sorted set to keep only the most recent MAX_ITEMS (highest scores). We store increasing timestamp.
     zremrangebyrank with 0...-N-1 removes older ones if we want to keep the last MAX_ITEMS.
@@ -42,7 +39,6 @@ def get_recent_ids(user_identifier: str, limit: int = 10):
     key=f"{RECENT_VIEW_PREFIX}:{user_identifier}"
     # zrevrange returns highest score first -> most recent finds
     raw_ids = r.zrevrange(key, 0, limit - 1)
-    print(f"Recent ids for {user_identifier}: {raw_ids}")
 
     ids = []
     for i in raw_ids:
