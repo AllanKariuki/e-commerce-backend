@@ -19,6 +19,9 @@ class Product(models.Model):
     sizes = ArrayField(models.CharField(max_length=10), blank=True, null=True)
     colors = ArrayField(models.CharField(max_length=30), blank=True, null=True)
     material = models.CharField(max_length=50, blank=True, null=True)
+    rating = models.FloatField(default=0.0)
+    original_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    brand = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
         return self.name
