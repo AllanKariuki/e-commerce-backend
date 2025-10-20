@@ -1,10 +1,13 @@
 from rest_framework import viewsets
-from django.db.models import Q
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from django.db.models import Q, Case, When
 from .models import Product, ProductCategory, ProductImage
 from django.db.models import Prefetch
 from .serializers import ProductSerializer, ProductCategorySerializer
 from .pagination import ProductPagination, CustomPageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser
+from .redis_recent import log_view, get_recent_ids
 
 
 class ProductCategoryViewSet(viewsets.ModelViewSet):
@@ -106,3 +109,45 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         return queryset
     
+    def retrieve(self, request, *args, **kwargs):
+        """ Override retrieve to log product view """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        # Determine user identifier (user id for auth's users, or cookies or session ids for guests)
+        user_identifier = self._get_user_identifier(request)
+        # Log to redis
+        try:
+            log_view(user_identifier, instance.id)
+        except Exception as e:
+            print(f"Error logging view for user {user_identifier}: {e}")
+            pass  # fail silently on logging errors
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="recent")
+    def recent(self, request):
+        """
+        GET /products/recent/ -> return products for this user
+        """
+        user_identifier = self.get_user_identifier(request)
+        ids = get_recent_ids(user_identifier, limit=20)
+
+        if not ids:
+            return Response([])
+        
+        # Fetch products from DB preserving the order returned by Redis
+        preserved = Case(*[When(id=pid, then=pos) for pos, pid in enumerate(ids)])
+        product_qs = Product.objects.filter(id__in=ids).order_by(preserved)
+
+        serializer = self.get_serializer(product_qs, many=True)
+        return Response(serializer.data)
+    
+    def _get_user_identifier(self, request):
+        if request.user and request.user.is_authenticated:
+            return f"user:{request.user.id}"
+        
+        guest_cookie = request.COOKIES.get("guest_session_id")
+        if guest_cookie:
+            return f"guest:{guest_cookie}"
+        
+        
