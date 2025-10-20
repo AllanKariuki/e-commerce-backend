@@ -41,5 +41,19 @@ def get_recent_ids(user_identifier: str, limit: int = 10):
     r = get_redis()
     key=f"{RECENT_VIEW_PREFIX}:{user_identifier}"
     # zrevrange returns highest score first -> most recent finds
-    ids = r.zrevrange(key, 0, limit - 1)
-    return [int((i) for i in ids)] if ids else []
+    raw_ids = r.zrevrange(key, 0, limit - 1)
+    print(f"Recent ids for {user_identifier}: {raw_ids}")
+
+    ids = []
+    for i in raw_ids:
+        # handle bytes or strings safely
+        if isinstance(i, bytes):
+            i = i.decode()
+        try:
+            ids.append(int(i))
+        except ValueError:
+            # fallback: keep as strign if not an integer
+            ids.append(i)
+    return ids
+
+    # return [int((i) for i in raw_ids)] if raw_ids else []
