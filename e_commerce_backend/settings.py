@@ -67,6 +67,7 @@ MIDDLEWARE = [
     'users.middleware.GuestCookieMiddleware',  # Custom middleware to set guest cookie
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'users.middleware.GuestCookieMiddleware',
     # 'django_keycloak.middleware.KeycloakMiddleware',
 ]
 
@@ -207,6 +208,10 @@ CORS_ALLOW_METHODS = [
 
 # Handle preflight requests
 CORS_PREFLIGHT_MAX_AGE = 86400
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
