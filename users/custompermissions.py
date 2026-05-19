@@ -24,4 +24,47 @@ class AdminOnly(BasePermission):
         user_roles = request.user.get('roles', {})
         realm_roles = user_roles.get('realm_roles', [])
         return 'admin' in realm_roles
-    
+
+class IsAuthenticatedOrGuest(BasePermission):
+    """
+    Allow both authenticated users and guests.
+    Use for endpoints that should be accessible to everyone.
+    """
+    def has_permission(self, request, view):
+        return request.user and (
+            request.user.is_authenticated or 
+            getattr(request.user, 'is_guest', False)
+        )
+
+
+class IsAuthenticatedUser(BasePermission):
+    """
+    Only allow authenticated Keycloak users, NOT guests.
+    Use for endpoints that require a real user account.
+    """
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+
+
+class IsGuestUser(BasePermission):
+    """
+    Only allow guest users.
+    Use for endpoints like "upgrade to full account".
+    """
+    def has_permission(self, request, view):
+        return (
+            request.user and 
+            not request.user.is_authenticated and 
+            getattr(request.user, 'is_guest', False)
+        )
+
+
+class IsAuthenticatedOrReadOnly(BasePermission):
+    """
+    Authenticated users can do anything.
+    Guests can only read (GET, HEAD, OPTIONS).
+    """
+    def has_permission(self, request, view):
+        if request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return True
+        return request.user and request.user.is_authenticated

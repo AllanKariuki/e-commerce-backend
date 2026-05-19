@@ -1,126 +1,108 @@
-from django.shortcuts import render
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from .models import Product, ProductCategory
+from rest_framework import viewsets
+from django.db.models import Q
+from .models import Product, ProductCategory, ProductImage
+from django.db.models import Prefetch
 from .serializers import ProductSerializer, ProductCategorySerializer
+from .pagination import ProductPagination, CustomPageNumberPagination
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class ProductCategoryViewSet(viewsets.ModelViewSet):
     queryset = ProductCategory.objects.all()
     serializer_class = ProductCategorySerializer
+    # pagination_class = CustomPageNumberPagination
 
-    def create(self, request):
-        try :
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response({ 
-                'detail': 'Product Category created successfully',
-                'data': serializer.data,
-            })
-        except ProductCategory.AlreadyExists:
-            return Response({
-                'detail': 'Product Category already exists',
-            }, status=status.HTTP_400_BAD_REQUEST)
-    
-    def list(self, request):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({'detail': serializer.data}, status = status.HTTP_200_OK) 
-    
-    def retrieve(self, request, pk=None):
-        try:
-            queryset = self.get_queryset()
-            product_category = queryset.get(pk=pk)
-            serializer = self.get_serializer(product_category)
-            return Response({'detail': serializer.data}, status = status.HTTP_200_OK)
-        except ProductCategory.DoesNotExist:
-            return Response({'detail': 'Product Category not found'}, status=status.HTTP_404_NOT_FOUND)
+    def get_queryset(self):
 
-    def update(self, request, pk=None):
-        try:
-            queryset = self.get_queryset()
-            product_category = queryset.get(pk=pk)
-            serializer = self.get_serializer(product_category, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response({
-                'detail': 'Product Category updated successfully',
-                'data': serializer.data,
-            })
-        except ProductCategory.DoesNotExist:
-            return Response({'detail': 'Product Category not found'}, status=status.HTTP_404_NOT_FOUND)
+        queryset = ProductCategory.objects.all()
 
-    def destroy(self, request, pk=None):
-        try:
-            queryset = self.get_queryset()
-            product_category = queryset.get(pk=pk).delete()
-            return Response({'detail': 'Product Category deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
-        except ProductCategory.DoesNotExist:
-            return Response({'detail': 'Product Category not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+        # Search by name
+        name = self.request.query_params.get("name", None)
+        if name is not None:
+            queryset = queryset.filter(name__icontains=name)
+
+        # search by description
+        search = self.request.query_params.get('search', None)
+        if search is not None:
+            queryset = queryset.filter(
+                Q(name__icontains=search) | 
+                Q(description__icontains=search)
+            )
+
+        return queryset
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
+    queryset = Product.objects.all().prefetch_related(
+        Prefetch('images', queryset=ProductImage.objects.order_by('-is_main'))
+    )
     serializer_class = ProductSerializer
+    parser_classes = (MultiPartParser, FormParser)
+    pagination_class = ProductPagination  # Custom pagination for products
 
-    def create(self, request):
-        try:
-            # category = request.body["category"]
-            serializer=self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                {'detail': 'Product created successfully', 'data': serializer.data},
-                status=status.HTTP_201_CREATED
-            )
-        except ProductCategory.DoesNotExist:
-            return Response(
-                    { 'detail': 'Product category does not exist'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        
-    def list(self, request):
-        queryset=self.get_queryset()
-        serializer= self.get_serializer(queryset, many=True)
-        return Response({ 'detail': serializer.data}, status=status.HTTP_200_OK)
+    def get_queryset(self):
+        queryset = Product.objects.all()
 
-    def retreive(self, request, pk=None):
-        try:
-            queryset = self.get_queryset()
-            product=queryset.get(pk=pk)
-            serializer=self.get_serializer(product)
-            return Response(
-                {'detail': serializer.data},
-                status=status.HTTP_200_OK
-            )
-        except Product.DoesNotExist:
-            return Response({'detail': 'The product does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+        # filter by ProductCategory
+        category = self.request.query_params.get('category', None)
+        if category is not None:
+            queryset = queryset.filter(category_id=category)
+
+        # Filter by catefory name
+        category_name = self.request.query_params.get('category_name', None)
+        if category_name is not None:
+            queryset = queryset.filter(category__name__icontains=category_name)
+
+        # Price range filtering
+        min_price = self.request.query_params.get('min_price', None)
+        if min_price is not None:
+            try:
+                queryset = queryset.filter(price__gte=float(min_price))
+            except ValueError:
+                pass
+
+        max_price = self.request.query_params.get('max_price', None)
+        if max_price is not None:
+            try:
+                queryset = queryset.filter(price__lte=float(max_price))
+            except ValueError:
+                pass
         
-    def update(self, request, pk=None):
-        try:
-            queryset=self.get_queryset()
-            product=queryset.get(pk=pk)
-            serializer=self.get_serializer(product, request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                {'detail': 'Product updated successfully'},
-                status=status.HTTP_200_OK
+        # Filter by stock availability
+        in_stock = self.request.query_params.get('in_stock', None)
+        if in_stock is not None:
+            if in_stock.lower() in ['true', '1', 'yes']:
+                queryset = queryset.filter(units_in_stock__gt=0)
+            elif in_stock.lower() in ['false', '0', 'no']:
+                queryset = queryset.filter(units_in_stock=0)
+
+        # General search across multiple fields
+        search = self.request.query_params.get('search', None)
+        if search is not None:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(description__icontains=search) |
+                Q(category__name__icontains=search)
             )
-        except Product.DoesNotExist:
-            return Response(
-                {'detail': 'Product cannot be updated as it does not exist'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+
+        # Ordering
+        ordering = self.request.query_params.get('ordering', None)
+        if ordering is not None:
+            # Allow ordering by name, price, units in stock and category
+            allowed_orderings = ['name', '-name', 'price', '-price',
+                                    'units_in_stock', '-units_in_stock',
+                                    'category__name', '-category__name']
+            if ordering in allowed_orderings:
+                queryset = queryset.order_by(ordering)
+        
+        # Colors 
+        color = self.request.query_params.get('color', None)
+        if color is not None:
+            queryset = queryset.filter(colors__contains=[color])
+        
+        # Sizes
+        size = self.request.query_params.get('size', None)
+        if size is not None:
+            queryset = queryset.filter(sizes__contains=[size])
+
+        return queryset
     
-    def destroy(self, request, pk=None):
-        try:
-            queryset=self.get_queryset()
-            product=queryset.get(pk=pk).delete()
-            return Response({'detail': 'Delete successful'}, status=status.HTTP_200_OK)
-        except Product.DoesNotExist:
-            return Response(
-                {'detail': 'Product does not exist'},
-                status=status.HTTP_400_BAD_REQUEST
-            )

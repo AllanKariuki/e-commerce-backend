@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import cloudinary
 from celery import Celery
 from celery.schedules import crontab
 
@@ -29,7 +30,12 @@ SECRET_KEY = 'django-insecure-d(!xz!#g+o-+8@5u7--r1or#^4*924w4plm-%+(-k=zp5ev2lj
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Fix ALLOWED_HOSTS to handle environment variable properly
+ALLOWED_HOSTS_ENV = os.getenv("ALLOWED_HOSTS", "localhost 127.0.0.1")
+ALLOWED_HOSTS = ALLOWED_HOSTS_ENV.split(" ") if ALLOWED_HOSTS_ENV else ['localhost', '127.0.0.1']
+
+# CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
 
@@ -39,22 +45,29 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'cloudinary_storage',
     'django.contrib.staticfiles',
+    'cloudinary',
     'rest_framework',
+    'corsheaders',
     'products',
     'orders',
     'users',
-    'django_keycloak.apps.KeycloakAppConfig'
+    'django_keycloak.apps.KeycloakAppConfig',
+
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'users.middleware.GuestCookieMiddleware',  # Custom middleware to set guest cookie
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'users.middleware.GuestCookieMiddleware',
     # 'django_keycloak.middleware.KeycloakMiddleware',
 ]
 
@@ -63,8 +76,14 @@ ROOT_URLCONF = 'e_commerce_backend.urls'
 # Custom authentication class
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'users.authentication.KeycloakTokenAuthentication',
+        # 'users.authentication.KeycloakTokenAuthentication',
+        'users.authentication.GuestOrKeycloakTokenAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    # 'PAGE_SIZE': 20  # Number of items per page
 }
 
 #Setting up keycloak to be the authentication backend
@@ -99,14 +118,6 @@ WSGI_APPLICATION = 'e_commerce_backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-print('Db name', os.getenv('DB_NAME'))
 
 DATABASES = {
     'default': {
@@ -158,8 +169,78 @@ STATIC_URL = 'static/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Your React app port
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",  # Your React app port
+    "http://127.0.0.1:5174",
+]
+
+# Alternative: if you want to allow all origins during development (less secure)
+# CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_CREDENTIALS = True
+
+# Allow specific headers - expanded list for better compatibility
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'cache-control',
+    'x-http-method-override',
+]
+
+# Allow specific methods
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Handle preflight requests
+CORS_PREFLIGHT_MAX_AGE = 86400
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+]
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+cloudinary.config(
+    cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key = os.getenv('CLOUDINARY_API_KEY'),
+    api_secret = os.getenv('CLOUDINARY_API_SECRET'),
+    secure=True
+)
+
+# Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": os.getenv('CLOUDINARY_CLOUD_NAME'),
+    "API_KEY": os.getenv("CLOUDINARY_API_KEY"),
+    "API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
+    "SECURE": True
+}
+
+# Media files configuration for Cloudinary
+MEDIA_URL = '/media/'
+# DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+    }
+}
 
 #Redis settings
 REDIS_HOST = os.getenv('REDIS_HOST')
