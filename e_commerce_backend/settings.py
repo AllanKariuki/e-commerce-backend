@@ -25,10 +25,16 @@ load_dotenv()
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-d(!xz!#g+o-+8@5u7--r1or#^4*924w4plm-%+(-k=zp5ev2lj'
+# Read from .env; fall back to an obviously-insecure dev value so a brand-new
+# clone still boots, but never use that fallback in production.
+SECRET_KEY = os.getenv(
+    'SECRET_KEY',
+    'django-insecure-dev-only-replace-via-env-do-not-deploy-this',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG is read from env; "1"/"true"/"yes" turn it on, anything else turns it off.
+DEBUG = os.getenv('DEBUG', '1').strip().lower() in ('1', 'true', 'yes', 'on')
 
 # Fix ALLOWED_HOSTS to handle environment variable properly
 ALLOWED_HOSTS_ENV = os.getenv("ALLOWED_HOSTS", "localhost 127.0.0.1")
@@ -49,13 +55,23 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'cloudinary',
     'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'products',
     'orders',
     'users',
-    'django_keycloak.apps.KeycloakAppConfig',
+    # Keycloak removed for MVP (2026-05-21). Kept here commented so the
+    # integration code in users/authentication.py stays referenceable
+    # while we run SimpleJWT in production. Re-enable later if/when we
+    # need enterprise SSO.
+    # 'django_keycloak.apps.KeycloakAppConfig',
 
 ]
+
+# Custom user model — must be set BEFORE the first migration is applied
+# to a fresh DB. See users/models.py for the AbstractBaseUser conversion.
+AUTH_USER_MODEL = 'users.User'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -64,20 +80,26 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'users.middleware.GuestCookieMiddleware',  # Custom middleware to set guest cookie
+    # GuestCookieMiddleware must sit AFTER AuthenticationMiddleware so it
+    # can read request.user. Only one instance — having it twice caused
+    # the guest cookie to be set on every response in two passes.
+    'users.middleware.GuestCookieMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'users.middleware.GuestCookieMiddleware',
     # 'django_keycloak.middleware.KeycloakMiddleware',
 ]
 
 ROOT_URLCONF = 'e_commerce_backend.urls'
 
-# Custom authentication class
+# DRF auth + permission defaults.
+# SimpleJWT issues/verifies access + refresh tokens for registered users;
+# the guest-cookie path stays intact for anonymous shoppers via
+# `GuestOrJWTAuthentication`.
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        # 'users.authentication.KeycloakTokenAuthentication',
-        'users.authentication.GuestOrKeycloakTokenAuthentication',
+        'users.authentication.GuestOrJWTAuthentication',
+        # Legacy class kept commented for reference / quick rollback.
+        # 'users.authentication.GuestOrKeycloakTokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
@@ -86,16 +108,41 @@ REST_FRAMEWORK = {
     # 'PAGE_SIZE': 20  # Number of items per page
 }
 
-#Setting up keycloak to be the authentication backend
-AUTHENTICATION_BACKENDS = [
-    'django_keycloak.auth.KeycloakAuthenticationBackend',
-]
+# SimpleJWT configuration. Lifetimes tuned for an e-commerce app: short
+# access window, long refresh so casual shoppers don't get logged out.
+# Override via env in production once we have a stable signing key
+# rotation story.
+from datetime import timedelta  # noqa: E402  (local import keeps top tidy)
 
-# Keycloak settings
-KEYCLOAK_SERVER_URL = os.getenv('KEYCLOAK_SERVER_URL')
-KEYCLOAK_REALM = os.getenv('KEYCLOAK_REALM')
-KEYCLOAK_CLIENT_ID = os.getenv('KEYCLOAK_CLIENT_ID')
-KEYCLOAK_CLIENT_SECRET = os.getenv('KEYCLOAK_CLIENT_SECRET')
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    # Fall back to Django's SECRET_KEY (already env-driven in Phase 0).
+    'SIGNING_KEY': os.getenv('JWT_SIGNING_KEY', SECRET_KEY),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+}
+
+# Keycloak auth backend removed for MVP. Django's default ModelBackend
+# handles password auth; SimpleJWT layers on top via its own authentication
+# class. Leave commented so reintroduction is a one-line revert.
+# AUTHENTICATION_BACKENDS = [
+#     'django_keycloak.auth.KeycloakAuthenticationBackend',
+# ]
+
+# Keycloak env vars no longer read; left here as comments so the
+# `KEYCLOAK_*` references in the legacy auth class still resolve to
+# `None` (via os.getenv default) without raising. If you re-enable
+# Keycloak, uncomment these and the INSTALLED_APPS / backend entries.
+# KEYCLOAK_SERVER_URL = os.getenv('KEYCLOAK_SERVER_URL')
+# KEYCLOAK_REALM = os.getenv('KEYCLOAK_REALM')
+KEYCLOAK_CLIENT_ID = os.getenv('KEYCLOAK_CLIENT_ID')  # referenced by legacy auth code; safe as None
+# KEYCLOAK_CLIENT_SECRET = os.getenv('KEYCLOAK_CLIENT_SECRET')
 
 TEMPLATES = [
     {
@@ -124,9 +171,11 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME'),
         'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASS'),
+        # Accept DB_PASS (current) or DB_PASSWORD (matches Postgres' own var name)
+        # so a single .env value satisfies both Django and the entrypoint script.
+        'PASSWORD': os.getenv('DB_PASS') or os.getenv('DB_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
-        'PORT': '5432',
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -257,7 +306,7 @@ CELERY_TIMEZONE = 'UTC'
 # Specify the modules where Celery should look for tasks
 CELERY_IMPORTS = [
     'e_commerce_backend.tasks',
-    # 'products.tasks',
+    'products.tasks',
     # 'orders.tasks',
     # 'users.tasks',
 ]
@@ -278,5 +327,14 @@ CELERY_BEAT_SCHEDULE = {
     'test-celery-every-minute': {
         'task': 'e_commerce_backend.tasks.test_celery',
         'schedule': 60.0,
-    }
+    },
+    # Backfill embeddings for products that don't have one yet.
+    # Cheap sweep — only enqueues missing rows.
+    'embed-missing-products-every-5-min': {
+        'task': 'products.tasks.embed_missing_products',
+        'schedule': 300.0,
+    },
 }
+
+# --- Replicate (CLIP + HairCLIP) ---
+REPLICATE_API_TOKEN = os.getenv('REPLICATE_API_TOKEN', '')

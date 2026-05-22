@@ -1,6 +1,7 @@
 from django.db import models
 from users.models import User
 from django.contrib.postgres.fields import ArrayField
+from pgvector.django import VectorField
 
 # Create your models here.
 class ProductCategory(models.Model):
@@ -9,7 +10,7 @@ class ProductCategory(models.Model):
 
     def __str__(self):
         return self.name
-    
+
 class Product(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
@@ -22,6 +23,12 @@ class Product(models.Model):
     rating = models.FloatField(default=0.0)
     original_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     brand = models.CharField(max_length=50, blank=True, null=True)
+
+    # CLIP ViT-B/32 image embedding (512-dim). Populated by
+    # products.tasks.embed_product_image (Celery) on save / image change.
+    # Null until the first embedding job completes.
+    embedding = VectorField(dimensions=512, null=True, blank=True)
+    embedding_updated_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name

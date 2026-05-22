@@ -1,5 +1,11 @@
 env
 .env
 __pycache__/
-.gitignore
+*.pyc
 .qodo
+
+# Celery beat persists its next-run schedule here; it's a binary
+# shelve file that should never be committed.
+celerybeat-schedule
+celerybeat-schedule.db
+celerybeat.pid

@@ -1,4 +1,20 @@
+"""
+DRF permission classes.
+
+Note (2026-05-21): `HasKeycloakRole` and `AdminOnly` below assume
+`request.user` is the decoded Keycloak token dict — that was the shape
+the legacy auth class returned in the `auth` payload. With the SimpleJWT
+swap, `request.user` is now a `users.User` instance and `request.auth`
+is the validated token. The role-based classes are kept here for
+reference only; new role checks should use Django's standard
+`is_staff` / `is_superuser` / group membership against the User model.
+The `IsAuthenticatedOrGuest`, `IsAuthenticatedUser`, `IsGuestUser`, and
+`IsAuthenticatedOrReadOnly` classes below remain correct under SimpleJWT
+because they only check `is_authenticated` / `is_guest`.
+"""
+
 from rest_framework.permissions import BasePermission
+
 
 class HasKeycloakRole(BasePermission):
     def __init__(self, required_role):
