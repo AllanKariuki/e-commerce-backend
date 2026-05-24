@@ -24,14 +24,17 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-def _embed_with_replicate(image_url: str) -> Optional[list[float]]:
+def embed_image_url(image_url: str) -> Optional[list[float]]:
     """
     Call Replicate's CLIP embedding model and return a 512-float vector.
     Returns None on failure so callers can decide whether to retry.
 
-    Imported lazily so the worker boots even if Replicate isn't installed
-    yet (useful during the Phase 0 bootstrap when devs first build the
-    image without the new requirements pinned in).
+    Public helper so both the Celery task layer and the synchronous
+    request path (e.g. ``products.views.VisualSearchView``) can share
+    the same embedding code. Replicate is imported lazily so the worker
+    boots even if the package isn't installed yet (useful during early
+    bootstrap when devs first build the image without the new
+    requirements pinned in).
     """
     try:
         import replicate  # type: ignore
@@ -99,7 +102,7 @@ def embed_product_image(self, product_id: int) -> str:
         logger.info("Image URL not yet accessible (%s); will retry", image_url)
         raise self.retry(countdown=30)
 
-    vector = _embed_with_replicate(image_url)
+    vector = embed_image_url(image_url)
     if vector is None:
         return "skipped:embed-failed"
 
