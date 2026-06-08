@@ -13,6 +13,7 @@ from .serializers import ProductSerializer, ProductCategorySerializer
 from .pagination import ProductPagination, CustomPageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser
 from .redis_recent import log_view, get_recent_ids
+from .throttling import VisualSearchAnonThrottle, VisualSearchUserThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -193,13 +194,21 @@ class VisualSearchView(APIView):
       6. Serialize the top N products + distance and return them
          alongside metadata about the query (Cloudinary URL, latency).
 
-    Anonymous access is intentional — rate limiting will be layered on
-    in the Phase 1 rate-limit task. Every call is logged as a
-    ``SearchQuery`` row (image URL, top result IDs, latency, who) so
-    we can do relevance tuning later.
+    Anonymous (guest) access is intentional so shoppers don't have to
+    sign up before trying the feature, but because every call costs us a
+    Cloudinary upload + a Replicate embedding, the endpoint is rate
+    limited per caller. Throttles run in DRF's ``initial()`` step, i.e.
+    *before* ``post()``, so an over-quota caller is rejected with HTTP 429
+    before we touch either paid service. Authenticated users get a higher
+    bucket than guests (see ``products.throttling`` and the
+    ``DEFAULT_THROTTLE_RATES`` settings).
+
+    Every call is logged as a ``SearchQuery`` row (image URL, top result
+    IDs, latency, who) so we can do relevance tuning later.
     """
 
     parser_classes = (MultiPartParser, FormParser)
+    throttle_classes = (VisualSearchAnonThrottle, VisualSearchUserThrottle)
 
     def post(self, request, *args, **kwargs):
         started = time.perf_counter()

@@ -104,6 +104,17 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    # Throttling. We don't set DEFAULT_THROTTLE_CLASSES globally (most reads
+    # are cheap and guest-friendly); instead expensive endpoints opt in via
+    # their own `throttle_classes`. The scoped rates below back the visual
+    # search throttles (see products/throttling.py). Buckets are stored in
+    # the default Redis cache, so this needs no extra infra.
+    'DEFAULT_THROTTLE_RATES': {
+        # Anonymous / guest shoppers, keyed by client IP.
+        'visual_search_anon': os.getenv('VISUAL_SEARCH_ANON_RATE', '10/hour'),
+        # Authenticated (SimpleJWT) users, keyed by user id.
+        'visual_search_user': os.getenv('VISUAL_SEARCH_USER_RATE', '60/hour'),
+    },
     # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     # 'PAGE_SIZE': 20  # Number of items per page
 }
@@ -318,7 +329,13 @@ CACHES = {
         "LOCATION": f"redis://{REDIS_HOST}:{REDIS_PORT}/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "REDIS_CLIENT_KWARGS": {"decode_responses": True}
+            # NOTE: do NOT set decode_responses=True here. django-redis stores
+            # cache values pickled (bytes); decoding responses to str makes
+            # unpickling on read fail, which silently breaks every consumer of
+            # the Django cache API — including DRF's rate throttling, which
+            # backs the visual-search quota. `products/redis_recent.py` talks
+            # to Redis over a raw connection and already handles bytes, so it
+            # is unaffected by this.
         }
     }
 }
