@@ -71,3 +71,17 @@ urllib3==2.3.0
 vine==5.1.0
 wcwidth==0.2.13
 zope.interface==7.2
+
+# --- Added for AI visual search & try-on ---
+# pgvector: Django integration for pgvector Postgres extension (VectorField + cosine search)
+pgvector==0.3.6
+# replicate: official client for hosted CLIP embeddings + HairCLIP try-on models
+replicate==0.34.1
+# numpy: needed to handle embedding vectors returned from Replicate
+numpy==2.1.3
+
+# --- Added 2026-05-21 for MVP auth (Keycloak swap) ---
+# djangorestframework-simplejwt: stateless JWT auth (access + refresh
+# tokens) replacing the Keycloak integration for the MVP. Includes a
+# token blacklist app so rotated/refresh tokens can be invalidated.
+djangorestframework-simplejwt==5.3.1

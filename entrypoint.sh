@@ -1,15 +1,20 @@
 #!/bin/bash
 
-# Wait for Postgres to be ready
-until PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -c '\q'; do
+# Wait for Postgres to be ready.
+# NOTE: the Django side of the project uses DB_PASS, not DB_PASSWORD.
+# Accept both so this script keeps working if a future .env adopts
+# DB_PASSWORD as the canonical name.
+PG_PASS="${DB_PASS:-$DB_PASSWORD}"
+until PGPASSWORD=$PG_PASS psql -h $DB_HOST -U $DB_USER -c '\q'; do
   echo "Waiting for Postgres at $DB_HOST..."
   sleep 2
 done
 
-# Create keycloak_db if it doesn't exist
+# Create keycloak_db if it doesn't exist (belt-and-braces; the init-db.sql
+# script in scripts/ also creates it on first boot of an empty pg volume).
 echo "Checking if keycloak_db exists..."
-PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -tc "SELECT 1 FROM pg_database WHERE datname = 'keycloak_db'" | grep -q 1 \
-  || PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -c "CREATE DATABASE keycloak_db"
+PGPASSWORD=$PG_PASS psql -h $DB_HOST -U $DB_USER -tc "SELECT 1 FROM pg_database WHERE datname = 'keycloak_db'" | grep -q 1 \
+  || PGPASSWORD=$PG_PASS psql -h $DB_HOST -U $DB_USER -c "CREATE DATABASE keycloak_db"
 
 # Django migrations (only run on web service to avoid race conditions)
 if [ "$1" = "gunicorn" ] || [ "$RUN_MIGRATIONS" = "true" ]; then

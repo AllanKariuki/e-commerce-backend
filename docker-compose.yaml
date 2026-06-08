@@ -9,51 +9,54 @@ services:
     depends_on:
       - postgresql
       - redis
-      - keycloak
+      # Keycloak removed from the MVP stack on 2026-05-21. SimpleJWT now
+      # handles auth (see users/authentication.py::GuestOrJWTAuthentication).
+      # - keycloak
+    env_file:
+      - .env
     environment:
-      - DEBUG=1
-      - SECRET_KEY=your_secret_key_here
-      - DJANGO_ALLOWED_HOSTS=localhost
-      - DB_NAME=ecommerce_db
-      - DB_USER=postgres
-      - DB_PASSWORD=Allan@2001
-      - DB_HOST=postgresql
-      - KEYCLOAK_SERVER_URL=http://keycloak:8083/
-      - KEYCLOAK_REALM=master
-      - KEYCLOAK_CLIENT_ID=ecommerce-backend
-      - KEYCLOAK_CLIENT_SECRET=cxVJwXrAnxQkmGaD92MkMvRC704IyJT3
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - RUN_MIGRATIONS=true
 
   postgresql:
-    image: bitnami/postgresql:latest
+    # Switched from bitnami/postgresql to pgvector/pgvector:pg16 so the
+    # `vector` extension is available for visual-search embeddings.
+    image: pgvector/pgvector:pg16
+    env_file:
+      - .env
     environment:
-      - POSTGRESQL_DATABASE=ecommerce_db
-      - POSTGRESQL_POSTGRES_DB=keycloak_db
-      - POSTGRESQL_USERNAME=postgres
-      - POSTGRESQL_PASSWORD=Allan@2001
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
-      - 'postgresql_data:/bitnami/postgresql'
+      - postgresql_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
 
-  keycloak:
-    image: bitnami/keycloak:latest
-    environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      - KC_SPI_THEME_STATIC_MAX_AGE=-1
-      - KC_SPI_THEME_CACHE_THEMES=false
-      - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://postgresql:5432/keycloak_db
-      - KC_DB_USERNAME=postgres
-      - KC_DB_PASSWORD=Allan@2001
-    depends_on:
-      - postgresql
-    ports:
-      - "8083:8080"
-  
+  # ---------------------------------------------------------------------
+  # Keycloak — disabled for the MVP. SimpleJWT covers register/login/refresh
+  # without an extra service to boot. Re-enable this block (and the
+  # `depends_on: keycloak` on backend-service, plus AUTHENTICATION_BACKENDS
+  # / INSTALLED_APPS entries in settings.py) if we ever need enterprise SSO.
+  # ---------------------------------------------------------------------
+  # keycloak:
+  #   image: bitnami/keycloak:latest
+  #   environment:
+  #     - KEYCLOAK_ADMIN=admin
+  #     - KEYCLOAK_ADMIN_PASSWORD=admin
+  #     - KC_SPI_THEME_STATIC_MAX_AGE=-1
+  #     - KC_SPI_THEME_CACHE_THEMES=false
+  #     - KC_DB=postgres
+  #     - KC_DB_URL=jdbc:postgresql://postgresql:5432/${KEYCLOAK_DB_NAME}
+  #     - KC_DB_USERNAME=${POSTGRES_USER}
+  #     - KC_DB_PASSWORD=${POSTGRES_PASSWORD}
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - postgresql
+  #   ports:
+  #     - "8083:8080"
+
   redis:
     image: bitnami/redis:latest
     environment:
@@ -61,7 +64,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - 'redis_data:/bitnami/redis'
+      - redis_data:/bitnami/redis
 
   celery:
     build: .
@@ -71,18 +74,8 @@ services:
     depends_on:
       - redis
       - postgresql
-    environment:
-      - DEBUG=1
-      - SECRET_KEY=your_secret_key_here
-      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
-      - DB_NAME=ecommerce_db
-      - DB_USER=postgres
-      - DB_PASSWORD=Allan@2001
-      - DB_HOST=postgresql
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    env_file:
+      - .env
 
   celery-beat:
     build: .
@@ -91,18 +84,8 @@ services:
       - .:/code
     depends_on:
       - redis
-    environment:
-      - DEBUG=1
-      - SECRET_KEY=your_secret_key_here
-      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
-      - DB_NAME=ecommerce_db
-      - DB_USER=postgres
-      - DB_PASSWORD=Allan@2001
-      - DB_HOST=postgresql
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    env_file:
+      - .env
 
 volumes:
   postgresql_data:

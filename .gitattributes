@@ -1,0 +1,17 @@
+# Force shell scripts and the Dockerfile to LF endings on every platform.
+# CRLF in entrypoint.sh breaks the Linux container — bash treats `\r`
+# as part of the shebang and the interpreter lookup fails.
+*.sh         text eol=lf
+Dockerfile   text eol=lf
+entrypoint.sh text eol=lf
+
+# Migrations and the Python source tree are LF too — keeps diffs sane
+# across Windows and Linux contributors.
+*.py         text eol=lf
+
+# Common binary types just to be explicit.
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.ico        binary
+*.pdf        binary
